@@ -1,0 +1,44 @@
+import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { SYSTEM_PROMPT } from '@/lib/system-prompt';
+
+export const maxDuration = 60;
+
+export async function POST(req: Request) {
+  const { prompt, apiKey, provider, model } = await req.json();
+
+  if (!apiKey || !prompt) {
+    return new Response(JSON.stringify({ error: 'API key and prompt are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let aiModel;
+
+  try {
+    if (provider === 'anthropic') {
+      const client = createAnthropic({ apiKey });
+      aiModel = client(model || 'claude-sonnet-4-20250514');
+    } else {
+      const client = createOpenAI({ apiKey });
+      aiModel = client(model || 'gpt-4o');
+    }
+
+    const result = streamText({
+      model: aiModel,
+      system: SYSTEM_PROMPT,
+      prompt: `Generate an SDF 3D model for: ${prompt}\n\nOutput only the function map(p) code. No markdown fences, no explanations.`,
+      temperature: 0.7,
+      maxOutputTokens: 2048,
+    });
+
+    return result.toTextStreamResponse();
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message || 'LLM call failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
