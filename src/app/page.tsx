@@ -73,31 +73,19 @@ export default function Home() {
         signal: controller.signal,
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const ct = res.headers.get('content-type');
-        if (ct?.includes('application/json')) {
-          const data = await res.json();
-          setError(data.error || `Error ${res.status}`);
-        } else {
-          setError(`Error ${res.status}: ${res.statusText}`);
-        }
+        setError(data.error || `Error ${res.status}`);
         return;
       }
 
-      const reader = res.body?.getReader();
-      if (!reader) { setError('No response body'); return; }
-
-      const decoder = new TextDecoder();
-      let fullText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        fullText += decoder.decode(value, { stream: true });
-        setCode(fullText);
+      if (data.error) {
+        setError(data.error);
+        return;
       }
 
-      const cleaned = cleanLLMOutput(fullText);
+      const cleaned = cleanLLMOutput(data.text || '');
       setCode(cleaned);
       setRenderCode(cleaned);
     } catch (e: any) {

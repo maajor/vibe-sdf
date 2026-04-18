@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { generateText } from 'ai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { SYSTEM_PROMPT } from '@/lib/system-prompt';
@@ -26,15 +26,18 @@ export async function POST(req: Request) {
       aiModel = client.chatModel(model || 'gpt-4o');
     }
 
-    const result = streamText({
+    const result = await generateText({
       model: aiModel,
       system: SYSTEM_PROMPT,
       prompt: `Generate an SDF 3D model for: ${prompt}\n\nOutput only the function map(p) code. No markdown fences, no explanations.`,
       temperature: 0.7,
-      maxOutputTokens: 2048,
+      maxTokens: 2048,
+      abortSignal: req.signal,
     });
 
-    return result.toTextStreamResponse();
+    return new Response(JSON.stringify({ text: result.text }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message || 'LLM call failed' }), {
       status: 500,
