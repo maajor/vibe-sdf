@@ -1,93 +1,93 @@
-# Vibe SDF — 项目规格文档
+# Vibe SDF — Project Specification
 
-## 概述
+## Overview
 
-LLM 驱动的 SDF 3D 模型生成器。用户输入自然语言描述，LLM 生成 SDF 代码，系统编译渲染为 3D 结果。
+LLM-driven SDF 3D model generator. Users describe objects in natural language, an LLM generates SDF code, and the system compiles and renders it as an interactive 3D scene.
 
-## 架构
+## Architecture
 
 ```
-用户 Prompt → LLM (Vercel AI SDK) → JS SDF 代码 → AST 转译 → GLSL → Ray Marching Shader → WebGL 渲染
+User Prompt → LLM (Vercel AI SDK) → JS SDF Code → AST Transpile → GLSL → Ray Marching Shader → WebGL Render
 ```
 
-## 技术栈
+## Tech Stack
 
-- **框架**: Next.js
-- **3D 渲染**: Three.js (PlaneGeometry + ShaderMaterial + OrbitControls)
-- **LLM**: Vercel AI SDK (支持 OpenAI / Anthropic 等)
-- **转译**: @babel/parser + 自定义 AST visitor → GLSL
-- **部署**: Vercel
-- **语言**: TypeScript
+- **Framework**: Next.js
+- **3D Rendering**: Three.js (PlaneGeometry + ShaderMaterial + OrbitControls)
+- **LLM**: Vercel AI SDK (OpenAI / Anthropic / etc.)
+- **Transpilation**: @babel/parser + custom AST visitor → GLSL
+- **Deployment**: Vercel
+- **Language**: TypeScript
 
-## UI 布局
+## UI Layout
 
-左右分栏：
-- **左**: 用户 API Key 输入 + prompt 输入框 + 生成按钮 + 生成代码预览（可编辑）
-- **右**: Three.js 3D 渲染视口（OrbitControls）
+Two-column layout:
+- **Left**: API Key input + prompt textarea + generate button + code preview (editable)
+- **Right**: Three.js 3D viewport (OrbitControls)
 
-## LLM 调用
+## LLM Integration
 
-- 用户自带 API Key（前端输入）
-- 通过 Vercel AI SDK 调用，支持多种 provider
-- 流式输出
+- User provides their own API Key (frontend input)
+- Called via Vercel AI SDK, supporting multiple providers
+- Streaming output
 
-## 渲染管线
+## Rendering Pipeline
 
-1. Three.js 创建 `PlaneGeometry(2, 2)` + `ShaderMaterial`
-2. Fragment shader 内执行 ray marching
-3. LLM 生成的 `map()` 函数转译后注入 shader
-4. 预置代码：法线计算、AO、软阴影、相机射线生成
-5. Uniform: `uResolution`, `uTime`, `uCameraPos`, `uCameraMatrix`
+1. Three.js creates `PlaneGeometry(2, 2)` + `ShaderMaterial`
+2. Fragment shader performs ray marching
+3. LLM-generated `map()` function is transpiled and injected into the shader
+4. Pre-built code: normal calculation, AO, soft shadows, camera ray generation
+5. Uniforms: `uResolution`, `uTime`, `uCameraPos`, `uCameraMatrix`
 
-## 光照
+## Lighting
 
-- 环境光遮蔽 (AO)
-- 软阴影
-- 不需要 PBR 环境贴图
-- 不支持动画（`uTime` 暂不用）
+- Ambient Occlusion (AO)
+- Soft shadows
+- No PBR environment maps
+- No animation support (`uTime` unused for now)
 
-## SDF 语法 API
+## SDF Syntax API
 
-### 原语
+### Primitives
 
-所有原语返回距离值，最后一个参数 `opts?` 为可选对象。
+All primitives return a distance value. Last parameter `opts?` is optional.
 
 ```js
 sphere(p, r, opts?)
-box(p, b, opts?)                    // b: vec3 半尺寸
-roundedBox(p, b, r, opts?)          // b: vec3 半尺寸, r: 圆角半径
-torus(p, t, opts?)                  // t: vec2(主半径, 管半径)
-capsule(p, a, b, r, opts?)          // a/b: vec3 端点, r: 半径
-cylinder(p, h, r, opts?)            // h: 半高, r: 半径
-cone(p, h, r, opts?)                // h: 半高, r: 底部半径
-plane(p, n, opts?)                  // n: vec3 法线
+box(p, b, opts?)                    // b: vec3 half-size
+roundedBox(p, b, r, opts?)          // b: vec3 half-size, r: corner radius
+torus(p, t, opts?)                  // t: vec2(major radius, tube radius)
+capsule(p, a, b, r, opts?)          // a/b: vec3 endpoints, r: radius
+cylinder(p, h, r, opts?)            // h: half-height, r: radius
+cone(p, h, r, opts?)                // h: half-height, r: base radius
+plane(p, n, opts?)                  // n: vec3 normal
 ```
 
 `opts`:
-- `color: [r, g, b]` (0-1)，默认 `[1, 1, 1]`
-- `rotation: vec3(x, y, z)` 欧拉角，度数
+- `color: [r, g, b]` (0–1 range), default `[1, 1, 1]`
+- `rotation: vec3(x, y, z)` Euler angles in degrees
 
-### CSG 操作
+### CSG Operations
 
 ```js
-union(a, b, k?)          // 并集，k 不传为硬边，传了平滑过渡
+union(a, b, k?)          // Union; hard edge if k omitted, smooth blend if provided
 subtract(a, b, k?)       // a - b
-intersect(a, b, k?)      // 交集
+intersect(a, b, k?)      // Intersection
 ```
 
-`a`/`b` 可以是原语或另一个 CSG 操作的返回值。材质颜色自动取距离最小的分支。
+`a`/`b` can be primitives or return values of other CSG operations. Material color is automatically inherited from the branch with the smallest distance.
 
-### 空间变换
+### Spatial Transforms
 
 ```js
 vec3(x, y, z)
 vec2(x, y)
-rotateX(p, angle)   // 弧度
+rotateX(p, angle)   // radians
 rotateY(p, angle)
 rotateZ(p, angle)
 ```
 
-### 数学常量与函数
+### Math Constants & Functions
 
 ```js
 PI, TAU
@@ -96,15 +96,15 @@ floor, ceil, fract, mix, step, smoothstep, mod, length, dot, cross,
 normalize, reflect
 ```
 
-### LLM 需要实现的函数
+### LLM-Implemented Function
 
 ```js
 function map(p) {
-  // 返回 CSG 树或单个原语
+  // Return a CSG tree or a single primitive
 }
 ```
 
-### 完整示例：杯子
+### Full Example: A Cup
 
 ```js
 function map(p) {
@@ -122,28 +122,28 @@ function map(p) {
 }
 ```
 
-## JS → GLSL 转译
+## JS → GLSL Transpilation
 
-使用 `@babel/parser` 解析 JS AST，自定义 visitor 生成 GLSL：
+Uses `@babel/parser` to parse JS AST, custom visitor generates GLSL:
 
-| JS | GLSL | 处理 |
+| JS | GLSL | Handling |
 |---|---|---|
-| `function map(p)` | `vec2 map(vec3 p)` | 返回 vec2(distance, materialId) |
-| 原语调用 | 内置 GLSL 函数 | 函数映射 |
-| `const d1 = expr` | `float d1 = expr` | 类型推断 |
-| `Math.sin(x)` | `sin(x)` | Math.* 转换 |
-| `vec3(x,y,z)` | `vec3(x,y,z)` | 直接映射 |
-| `opts: { color: [...] }` | 材质 ID 编码 | 注入材质表 |
+| `function map(p)` | `vec2 map(vec3 p)` | Returns vec2(distance, materialId) |
+| Primitive calls | Built-in GLSL functions | Function mapping |
+| `const d1 = expr` | `float d1 = expr` | Type inference |
+| `Math.sin(x)` | `sin(x)` | Math.* conversion |
+| `vec3(x,y,z)` | `vec3(x,y,z)` | Direct mapping |
+| `opts: { color: [...] }` | Material ID encoding | Inject into material table |
 
-材质处理：CSG 操作内部同时追踪距离和颜色，取距离最小分支的颜色。对 LLM 透明。
+Material handling: CSG operations internally track both distance and color simultaneously, selecting the color from the branch with the smallest distance. Transparent to the LLM.
 
-## 错误处理
+## Error Handling
 
-- LLM 生成代码转译失败：显示错误信息
-- Shader 编译失败：显示 GLSL 错误
-- 保留上一个成功渲染的结果，不会清空视口
-- 生成代码可手动编辑后重新渲染
+- Transpilation failure: display error message
+- Shader compilation failure: display GLSL error
+- Preserve the last successful render — viewport is never cleared on error
+- Generated code is editable; user can manually tweak and re-render
 
-## MVP 范围
+## MVP Scope
 
-第一版目标：跑通 `prompt → SDF → 渲染` 完整链路。
+First version goal: complete `prompt → SDF → render` pipeline.
