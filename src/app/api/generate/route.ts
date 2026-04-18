@@ -3,7 +3,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { SYSTEM_PROMPT } from '@/lib/system-prompt';
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: Request) {
   const { prompt, apiKey, baseUrl, provider, model } = await req.json();
@@ -26,12 +26,14 @@ export async function POST(req: Request) {
       aiModel = client.chatModel(model || 'gpt-4o');
     }
 
+    // Merge system prompt into user message for better third-party LLM compatibility
+    const userMessage = `${SYSTEM_PROMPT}\n\n---\n\nUser request: Generate an SDF 3D model for: ${prompt}\n\nOutput only the function map(p) code. No markdown fences, no explanations.`;
+
     const result = await generateText({
       model: aiModel,
-      system: SYSTEM_PROMPT,
-      prompt: `Generate an SDF 3D model for: ${prompt}\n\nOutput only the function map(p) code. No markdown fences, no explanations.`,
+      prompt: userMessage,
       temperature: 0.7,
-      maxTokens: 2048,
+      maxTokens: 4096,
       abortSignal: req.signal,
     });
 
