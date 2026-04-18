@@ -142,7 +142,7 @@ function map(p) {
       cylinder(p - vec3(0, 0.05, 0), 0.85, 0.45)
     ),
     torus(
-      rotateY(p - vec3(0.6, 0.1, 0), PI / 2),
+      rotateX(p - vec3(0.6, 0.1, 0), PI / 2),
       vec2(0.3, 0.06),
       { color: [0.9, 0.85, 0.8] }
     )
