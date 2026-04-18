@@ -26,6 +26,24 @@ import type {
   SequenceExpression,
 } from '@babel/types';
 
+// GLSL reserved words that cannot be used as variable names
+const GLSL_RESERVED = new Set([
+  'external', 'in', 'out', 'inout', 'uniform', 'varying', 'attribute',
+  'const', 'if', 'else', 'for', 'while', 'do', 'break', 'continue',
+  'return', 'discard', 'struct', 'void', 'bool', 'int', 'float',
+  'vec2', 'vec3', 'vec4', 'mat2', 'mat3', 'mat4', 'sampler2D',
+  'highp', 'mediump', 'lowp', 'precision', 'layout', 'flat',
+  'smooth', 'noperspective', 'centroid', 'patch', 'sample',
+  'subroutine', 'coherent', 'volatile', 'restrict', 'readonly',
+  'writeonly', 'invariant', 'precise', 'shared', 'buffer',
+  'image', 'atomic_uint', 'layout',
+]);
+
+function sanitizeName(name: string): string {
+  if (GLSL_RESERVED.has(name)) return `_${name}_`;
+  return name;
+}
+
 // Material color tracking
 let materialCounter: number;
 let materialColors: Map<number, [number, number, number]>;
@@ -56,7 +74,7 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
       return Number.isInteger(node.value) ? `${node.value}.0` : `${node.value}`;
 
     case 'Identifier': {
-      const name = node.name;
+      const name = sanitizeName(node.name);
       // Math constants
       if (name === 'PI') return '3.14159265359';
       if (name === 'TAU') return '6.28318530718';
@@ -310,7 +328,7 @@ function transpileStatement(node: any, scopeVars: Map<string, string>, indent: s
       const lines: string[] = [];
       for (const decl of node.declarations) {
         if (decl.id.type === 'Identifier') {
-          const name = decl.id.name;
+          const name = sanitizeName(decl.id.name);
           if (decl.init) {
             const expr = transpileExpression(decl.init, scopeVars);
             // Detect type from the expression
@@ -433,17 +451,18 @@ function inferType(node: any, scopeVars: Map<string, string>): string {
 }
 
 function transpileFunction(node: FunctionDeclaration): string {
-  const name = node.id?.name || 'unknown';
+  const name = sanitizeName(node.id?.name || 'unknown');
   const params = node.params;
 
   // Build parameter list
   const paramList: string[] = [];
   for (const p of params) {
     if (p.type === 'Identifier') {
-      if (p.name === 'p') {
+      const pName = sanitizeName(p.name);
+      if (pName === 'p') {
         paramList.push('vec3 p');
       } else {
-        paramList.push(`float ${p.name}`);
+        paramList.push(`float ${pName}`);
       }
     }
   }
