@@ -66,7 +66,7 @@ export default function Viewport({ code, onError }: ViewportProps) {
         rendererRef.current.compile(testScene, new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10));
 
         // Check for shader compilation errors
-        const program = (testMat as any).program;
+        const program = (testMat as {program?: {fragmentShader: WebGLShader}}).program;
         if (program) {
           const fragShader = program.fragmentShader;
           const diagnostics = gl.getShaderInfoLog(fragShader);
@@ -103,8 +103,8 @@ export default function Viewport({ code, onError }: ViewportProps) {
       materialRef.current.needsUpdate = true;
       lastGoodCode.current = jsCode;
       onError(null);
-    } catch (e: any) {
-      onError(`Shader error: ${e.message}`);
+    } catch (e: unknown) {
+      onError(`Shader error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, [onError]);
 
@@ -121,7 +121,7 @@ export default function Viewport({ code, onError }: ViewportProps) {
 
     // Camera (used only for OrbitControls; actual rendering is fullscreen quad)
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
-    camera.position.set(3, 2.5, 4);
+    camera.position.set(30, 20.5, 40);
     cameraRef.current = camera;
 
     // Renderer

@@ -1,29 +1,8 @@
 import { parse } from '@babel/parser';
-import traverse from '@babel/traverse';
 import type {
-  File,
+  Node,
   FunctionDeclaration,
-  CallExpression,
   Identifier,
-  NumericLiteral,
-  ObjectExpression,
-  ArrayExpression,
-  BinaryExpression,
-  ReturnStatement,
-  VariableDeclaration,
-  ExpressionStatement,
-  VariableDeclarator,
-  MemberExpression,
-  UnaryExpression,
-  LogicalExpression,
-  ConditionalExpression,
-  AssignmentExpression,
-  BlockStatement,
-  IfStatement,
-  ForStatement,
-  WhileStatement,
-  UpdateExpression,
-  SequenceExpression,
 } from '@babel/types';
 
 // GLSL reserved words that cannot be used as variable names
@@ -54,10 +33,6 @@ interface TranspileResult {
   error?: string;
 }
 
-function defaultColor(): [number, number, number] {
-  return [1.0, 1.0, 1.0];
-}
-
 function emitVec3(args: string[]): string {
   return `vec3(${args.join(', ')})`;
 }
@@ -66,7 +41,7 @@ function emitVec2(args: string[]): string {
   return `vec2(${args.join(', ')})`;
 }
 
-function transpileExpression(node: any, scopeVars: Map<string, string>): string {
+function transpileExpression(node: Node, scopeVars: Map<string, string>): string {
   if (!node) return '0.0';
 
   switch (node.type) {
@@ -85,7 +60,9 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
 
     case 'CallExpression': {
       const callee = node.callee;
-      const args = node.arguments.map((a: any) => transpileExpression(a, scopeVars));
+      const args = node.arguments
+        .filter((a: Node) => a.type !== 'ObjectExpression')
+        .map((a: Node) => transpileExpression(a, scopeVars));
 
       if (callee.type === 'Identifier') {
         const fn = callee.name;
@@ -256,11 +233,11 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
     }
 
     case 'SequenceExpression': {
-      return node.expressions.map((e: any) => transpileExpression(e, scopeVars)).join(', ');
+      return node.expressions.map((e: Node) => transpileExpression(e, scopeVars)).join(', ');
     }
 
     case 'ArrayExpression': {
-      const elements = node.elements.map((e: any) => transpileExpression(e, scopeVars));
+      const elements = node.elements.map((e: Node) => transpileExpression(e, scopeVars));
       if (elements.length === 3) return emitVec3(elements);
       if (elements.length === 2) return emitVec2(elements);
       return `float[${elements.length}](${elements.join(', ')})`;
@@ -268,7 +245,7 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
 
     case 'MemberExpression': {
       const obj = transpileExpression(node.object, scopeVars);
-      const prop = (node.property as any).name;
+      const prop = (node.property as Identifier).name;
       // Swizzle: p.x, p.y, p.z for vec3 access
       if (node.computed) {
         return `${obj}[${transpileExpression(node.property, scopeVars)}]`;
@@ -282,7 +259,7 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
   }
 }
 
-function extractOpts(args: any[], requiredCount: number, scopeVars: Map<string, string>): {
+function extractOpts(args: Node[], requiredCount: number, scopeVars: Map<string, string>): {
   color: [number, number, number] | null;
   rotation: [number, number, number] | null;
 } {
@@ -297,8 +274,8 @@ function extractOpts(args: any[], requiredCount: number, scopeVars: Map<string, 
       for (const prop of optsArg.properties) {
         if (prop.type === 'ObjectProperty' && prop.key.type === 'Identifier') {
           if (prop.key.name === 'color' && prop.value.type === 'ArrayExpression') {
-            const vals = prop.value.elements.map((e: any) => {
-              if (e.type === 'NumericLiteral') return e.value;
+            const vals = prop.value.elements.map((e: Node) => {
+              if (e.type === 'NumericLiteral') return (e as {type: 'NumericLiteral'; value: number}).value;
               return parseFloat(transpileExpression(e, scopeVars));
             });
             if (vals.length === 3) {
@@ -306,8 +283,8 @@ function extractOpts(args: any[], requiredCount: number, scopeVars: Map<string, 
             }
           }
           if (prop.key.name === 'rotation' && prop.value.type === 'ArrayExpression') {
-            const vals = prop.value.elements.map((e: any) => {
-              if (e.type === 'NumericLiteral') return e.value;
+            const vals = prop.value.elements.map((e: Node) => {
+              if (e.type === 'NumericLiteral') return (e as {type: 'NumericLiteral'; value: number}).value;
               return parseFloat(transpileExpression(e, scopeVars));
             });
             if (vals.length === 3) {
@@ -334,7 +311,7 @@ function radians(deg: number): string {
   return `(${deg} * 3.14159265359 / 180.0)`;
 }
 
-function transpileStatement(node: any, scopeVars: Map<string, string>, indent: string): string {
+function transpileStatement(node: Node, scopeVars: Map<string, string>, indent: string): string {
   switch (node.type) {
     case 'VariableDeclaration': {
       const lines: string[] = [];
@@ -413,13 +390,13 @@ function transpileStatement(node: any, scopeVars: Map<string, string>, indent: s
   }
 }
 
-function transpileBlock(block: any, scopeVars: Map<string, string>, indent: string): string {
+function transpileBlock(block: Node, scopeVars: Map<string, string>, indent: string): string {
   if (!block || !block.body) return '';
   const childScope = new Map(scopeVars);
-  return block.body.map((stmt: any) => transpileStatement(stmt, childScope, indent)).join('\n') + '\n';
+  return (block as {body: Node[]}).body.map((stmt: Node) => transpileStatement(stmt, childScope, indent)).join('\n') + '\n';
 }
 
-function inferType(node: any, scopeVars: Map<string, string>): string {
+function inferType(node: Node, scopeVars: Map<string, string>): string {
   if (!node) return 'float';
 
   // Check for SdfResult-returning calls
@@ -527,7 +504,7 @@ export function transpile(jsCode: string): TranspileResult {
     });
 
     console.log('[transpiler] AST parsed successfully, top-level nodes:',
-      ast.program.body.map((n: any) => n.type));
+      ast.program.body.map((n: Node) => n.type));
 
     let glslOutput = '';
 
@@ -564,7 +541,7 @@ export function transpile(jsCode: string): TranspileResult {
       glslMapFunction: glslOutput,
       materialColorTable,
     };
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[transpiler] Parse error:', e.message);
     return {
       glslMapFunction: '',

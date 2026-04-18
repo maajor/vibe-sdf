@@ -44,10 +44,10 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ text }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('LLM call failed:', e);
 
-    return new Response(JSON.stringify({ error: e.message || 'LLM call failed' }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : 'LLM call failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
