@@ -6,7 +6,7 @@ import { SYSTEM_PROMPT } from '@/lib/system-prompt';
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const { prompt, apiKey, provider, model } = await req.json();
+  const { prompt, apiKey, baseUrl, provider, model } = await req.json();
 
   if (!apiKey || !prompt) {
     return new Response(JSON.stringify({ error: 'API key and prompt are required' }), {
@@ -19,10 +19,10 @@ export async function POST(req: Request) {
 
   try {
     if (provider === 'anthropic') {
-      const client = createAnthropic({ apiKey });
+      const client = createAnthropic({ apiKey, baseURL: baseUrl || undefined });
       aiModel = client(model || 'claude-sonnet-4-20250514');
     } else {
-      const client = createOpenAI({ apiKey });
+      const client = createOpenAI({ apiKey, baseURL: baseUrl || undefined });
       aiModel = client(model || 'gpt-4o');
     }
 

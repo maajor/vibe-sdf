@@ -20,6 +20,7 @@ function cleanLLMOutput(text: string): string {
 export default function Home() {
   const [provider, setProvider] = useState<Provider>('openai');
   const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
   const [model, setModel] = useState('');
   const [prompt, setPrompt] = useState('');
   const [code, setCode] = useState('');
@@ -36,6 +37,7 @@ export default function Home() {
         const s = JSON.parse(saved);
         if (s.provider) setProvider(s.provider);
         if (s.apiKey) setApiKey(s.apiKey);
+        if (s.baseUrl) setBaseUrl(s.baseUrl);
         if (s.model) setModel(s.model);
       }
     } catch { /* ignore */ }
@@ -44,9 +46,9 @@ export default function Home() {
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('vibe-sdf-settings', JSON.stringify({ provider, apiKey, model }));
+      localStorage.setItem('vibe-sdf-settings', JSON.stringify({ provider, apiKey, baseUrl, model }));
     } catch { /* ignore */ }
-  }, [provider, apiKey, model]);
+  }, [provider, apiKey, baseUrl, model]);
 
   const handleGenerate = useCallback(async () => {
     if (!apiKey.trim() || !prompt.trim()) return;
@@ -64,6 +66,7 @@ export default function Home() {
         body: JSON.stringify({
           prompt: prompt.trim(),
           apiKey: apiKey.trim(),
+          baseUrl: baseUrl.trim() || undefined,
           provider,
           model: model.trim() || undefined,
         }),
@@ -103,7 +106,7 @@ export default function Home() {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [apiKey, prompt, provider, model]);
+  }, [apiKey, baseUrl, prompt, provider, model]);
 
   const handleCodeChange = useCallback((value: string) => {
     setCode(value);
@@ -144,6 +147,12 @@ export default function Home() {
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="Model (default: gpt-4o / claude-sonnet-4)"
+            className="w-full bg-[#14141e] border border-[#2a2a3a] rounded-md px-2.5 py-1.5 text-sm text-[#c8c8e0] placeholder:text-[#3a3a5a] outline-none focus:border-[#5a5aff]"
+          />
+          <input
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            placeholder="Base URL (optional, for third-party LLM)"
             className="w-full bg-[#14141e] border border-[#2a2a3a] rounded-md px-2.5 py-1.5 text-sm text-[#c8c8e0] placeholder:text-[#3a3a5a] outline-none focus:border-[#5a5aff]"
           />
         </div>
