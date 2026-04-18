@@ -1,5 +1,5 @@
 import { streamText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { SYSTEM_PROMPT } from '@/lib/system-prompt';
 
@@ -22,8 +22,8 @@ export async function POST(req: Request) {
       const client = createAnthropic({ apiKey, baseURL: baseUrl || undefined });
       aiModel = client(model || 'claude-sonnet-4-20250514');
     } else {
-      const client = createOpenAI({ apiKey, baseURL: baseUrl || undefined });
-      aiModel = client(model || 'gpt-4o');
+      const client = createOpenAICompatible({ name: 'openai-compatible', baseURL: baseUrl || undefined, apiKey });
+      aiModel = client.chatModel(model || 'gpt-4o');
     }
 
     const result = streamText({

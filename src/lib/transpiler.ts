@@ -193,8 +193,9 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
                          'normalize', 'reflect', 'exp', 'log', 'sign'];
         if (mathFns.includes(fn)) return `${fn}(${args.join(', ')})`;
 
-        // User-defined function call
-        return `${fn}(${args.join(', ')})`;
+        // User-defined function call - sanitize the name to match the sanitized definition
+        const safeFn = sanitizeName(fn);
+        return `${safeFn}(${args.join(', ')})`;
       }
 
       if (callee.type === 'MemberExpression' &&
@@ -265,8 +266,19 @@ function transpileExpression(node: any, scopeVars: Map<string, string>): string 
       return `float[${elements.length}](${elements.join(', ')})`;
     }
 
+    case 'MemberExpression': {
+      const obj = transpileExpression(node.object, scopeVars);
+      const prop = (node.property as any).name;
+      // Swizzle: p.x, p.y, p.z for vec3 access
+      if (node.computed) {
+        return `${obj}[${transpileExpression(node.property, scopeVars)}]`;
+      }
+      return `${obj}.${prop}`;
+    }
+
     default:
-      return `/* unsupported: ${node.type} */`;
+      console.warn(`[transpiler] Unsupported expression type: ${node.type}`);
+      return `0.0 /* unsupported expression: ${node.type} */`;
   }
 }
 
@@ -396,7 +408,8 @@ function transpileStatement(node: any, scopeVars: Map<string, string>, indent: s
     }
 
     default:
-      return `${indent}/* unhandled statement: ${node.type} */`;
+      console.warn(`[transpiler] Unsupported statement type: ${node.type}`);
+      return `${indent}/* unsupported statement: ${node.type} */`;
   }
 }
 
@@ -434,7 +447,8 @@ function inferType(node: any, scopeVars: Map<string, string>): string {
 
   if (node.type === 'NumericLiteral') return 'float';
   if (node.type === 'Identifier') {
-    if (scopeVars.has(node.name)) return scopeVars.get(node.name)!;
+    const name = sanitizeName(node.name);
+    if (scopeVars.has(name)) return scopeVars.get(name)!;
     return 'float';
   }
   if (node.type === 'BinaryExpression') return 'float';
@@ -504,11 +518,16 @@ export function transpile(jsCode: string): TranspileResult {
   materialCounter = 0;
   materialColors = new Map();
 
+  console.log('[transpiler] Input JS code:\n' + jsCode);
+
   try {
     const ast = parse(jsCode, {
       sourceType: 'module',
       plugins: ['typescript'],
     });
+
+    console.log('[transpiler] AST parsed successfully, top-level nodes:',
+      ast.program.body.map((n: any) => n.type));
 
     let glslOutput = '';
 
@@ -522,23 +541,31 @@ export function transpile(jsCode: string): TranspileResult {
         const scopeVars = new Map<string, string>();
         glslOutput += transpileStatement(node, scopeVars, '') + '\n';
       }
+      // Report unsupported top-level nodes
+      if (node.type !== 'FunctionDeclaration' && node.type !== 'VariableDeclaration') {
+        console.warn(`[transpiler] Unsupported top-level node type: ${node.type}`);
+      }
     }
 
     if (!glslOutput.includes('vec2 map(vec3 p)')) {
       return {
         glslMapFunction: '',
         materialColorTable: '',
-        error: 'No map() function found in the generated code.',
+        error: 'No map() function found in the generated code. Define a function called "map" that takes a vec3 parameter p and returns an SDF result.',
       };
     }
 
     const materialColorTable = buildMaterialColorTable();
+
+    console.log('[transpiler] Generated GLSL map function:\n' + glslOutput);
+    console.log('[transpiler] Material color table:\n' + materialColorTable);
 
     return {
       glslMapFunction: glslOutput,
       materialColorTable,
     };
   } catch (e: any) {
+    console.error('[transpiler] Parse error:', e.message);
     return {
       glslMapFunction: '',
       materialColorTable: '',

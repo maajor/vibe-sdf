@@ -64,11 +64,6 @@ SdfResult sdCone(vec3 p, float h, float r, float matId) {
   vec2 ap = q - tip;
   float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
   float d = length(ap - ab * t);
-  // Make sure point is inside cone bounds
-  float side = length(vec2(q.x - r * (h - q.y) / (2.0 * h), q.y)) - length(ab) * t;
-  vec2 c = vec2(r, h);
-  q = abs(q);
-  float external = max(dot(c, q), -h - q.y);
   // Simpler cone SDF
   vec2 qq = vec2(length(p.xz), p.y);
   float coneD = max(dot(vec2(r/h, -1.0), qq), -qq.y - h);
@@ -265,6 +260,7 @@ void main() {
 `;
 
 export function buildFragmentShader(userMapFunction: string, materialColorTable: string): string {
+  console.log('[shader] Assembling fragment shader with user map function and material table');
   const uniforms = /* glsl */ `
 uniform vec2 uResolution;
 uniform float uTime;
@@ -275,5 +271,7 @@ ${sdfPrimitives}
 ${userMapFunction}
 
 `;
-  return uniforms + rayMarchingFooter.replace('MATERIAL_COLOR_TABLE', materialColorTable);
+  const fullShader = uniforms + rayMarchingFooter.replace('MATERIAL_COLOR_TABLE', materialColorTable);
+  console.log('[shader] Final shader length:', fullShader.length, 'chars');
+  return fullShader;
 }

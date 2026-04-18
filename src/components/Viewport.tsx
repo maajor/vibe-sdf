@@ -27,12 +27,16 @@ export default function Viewport({ code, onError }: ViewportProps) {
       return;
     }
 
+    console.log('[viewport] Compiling shader from JS code...');
     const result = transpile(jsCode);
 
     if (result.error) {
+      console.error('[viewport] Transpile error:', result.error);
       onError(result.error);
       return;
     }
+
+    console.log('[viewport] Transpile successful, building fragment shader...');
 
     if (!materialRef.current) return;
 
@@ -67,7 +71,24 @@ export default function Viewport({ code, onError }: ViewportProps) {
           const fragShader = program.fragmentShader;
           const diagnostics = gl.getShaderInfoLog(fragShader);
           if (diagnostics && diagnostics.includes('ERROR')) {
-            onError(`GLSL Error:\n${diagnostics}`);
+            // Extract line numbers and show context
+            const lines = fragmentShader.split('\n');
+            const errorLines = diagnostics.split('\n').filter(l => l.includes('ERROR'));
+            const contextLines: string[] = [];
+            for (const errLine of errorLines) {
+              const match = errLine.match(/ERROR:\s*\d+:(\d+)/);
+              if (match) {
+                const lineNum = parseInt(match[1]);
+                const start = Math.max(0, lineNum - 2);
+                const end = Math.min(lines.length, lineNum + 2);
+                for (let i = start; i < end; i++) {
+                  const marker = i === lineNum - 1 ? '>>>' : '   ';
+                  contextLines.push(`${marker} ${i + 1}: ${lines[i]}`);
+                }
+                contextLines.push('');
+              }
+            }
+            onError(`GLSL Error:\n${diagnostics}\n\nContext:\n${contextLines.join('\n')}`);
             testMat.dispose();
             testMesh.geometry.dispose();
             return;
