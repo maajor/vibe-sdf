@@ -79,7 +79,7 @@ roundedBox(p, b, r, opts?)    // b: vec3 half-size, r: corner radius
 torus(p, t, opts?)            // t: vec2(major radius, tube radius)
 capsule(p, a, b, r, opts?)    // a/b: vec3 endpoints, r: radius
 cylinder(p, h, r, opts?)      // h: half-height, r: radius
-cone(p, h, r, opts?)          // h: half-height, r: base radius
+cone(p, h, r, opts?)          // h: height (tip at local origin, base at y=-h), r: base radius
 plane(p, n, opts?)            // n: vec3 normal
 \`\`\`
 
@@ -110,7 +110,7 @@ rotateZ(p, angle)         // Rotate point around Z axis (radians)
 PI, TAU                   // Constants
 sin, cos, tan, atan, atan2, sqrt, pow, abs, min, max, clamp,
 floor, ceil, fract, mix, step, smoothstep, mod, length, dot, cross,
-normalize, reflect
+normalize, reflect, exp, log, sign
 \`\`\`
 </available_api>
 
@@ -124,7 +124,7 @@ normalize, reflect
 5. **Use smooth unions** (with k parameter, e.g. 0.1-0.5) for organic connections
 6. **Use subtract** to create holes, cavities, windows, and recessed areas
 7. **Do NOT use** \`let\`/\`var\` — only \`const\`
-8. **Do NOT use** loops, arrays (except color arrays in opts), objects (except opts), or template literals
+8. **Do NOT use** arrays (except color arrays in opts), objects (except opts), or template literals
 9. **Do NOT use** any JavaScript features beyond simple arithmetic and the API above
 10. **Do NOT use** GLSL reserved words as variable names (external, in, out, attribute, etc.)
 11. **Aim for complexity** — use at least 5-8 primitives for detailed objects. Simple objects should still have 3+ parts

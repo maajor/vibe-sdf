@@ -71,14 +71,13 @@ export default function Home() {
         return;
       }
 
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-
       const cleaned = cleanLLMOutput(data.text || '');
       setCode(cleaned);
       setRenderCode(cleaned);
+
+      if (data.error) {
+        setError(data.error);
+      }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name !== 'AbortError') setError(e.message || 'Generation failed');
       else if (!(e instanceof DOMException)) setError(e instanceof Error ? e.message : 'Generation failed');
