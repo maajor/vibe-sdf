@@ -6,6 +6,7 @@ import CodeEditor from '@/components/CodeEditor';
 
 const Viewport = dynamic(() => import('@/components/Viewport'), { ssr: false });
 
+type Provider = 'openai' | 'anthropic';
 
 function cleanLLMOutput(text: string): string {
   let cleaned = text.trim();
@@ -17,6 +18,15 @@ function cleanLLMOutput(text: string): string {
 }
 
 export default function Home() {
+  // Restore saved settings from localStorage
+  const savedSettings = typeof window !== 'undefined'
+    ? (() => { try { return JSON.parse(localStorage.getItem('vibe-sdf-settings') || '{}'); } catch { return {}; } })()
+    : {} as Record<string, string>;
+
+  const [provider, setProvider] = useState<Provider>((savedSettings as Record<string, string>).provider === 'anthropic' ? 'anthropic' : 'openai');
+  const [apiKey, setApiKey] = useState(savedSettings.apiKey || '');
+  const [baseUrl, setBaseUrl] = useState(savedSettings.baseUrl || '');
+  const [model, setModel] = useState(savedSettings.model || '');
   const [prompt, setPrompt] = useState('');
   const [code, setCode] = useState('');
   const [renderCode, setRenderCode] = useState('');
@@ -24,22 +34,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Restore saved settings from localStorage
-  const savedSettings = typeof window !== 'undefined'
-    ? (() => { try { return JSON.parse(localStorage.getItem('vibe-sdf-settings') || '{}'); } catch { return {}; } })()
-    : {} as Record<string, string>;
-
-  const [apiKey, setApiKey] = useState(savedSettings.apiKey || '');
-  const [baseUrl, setBaseUrl] = useState(savedSettings.baseUrl || '');
-  const [model, setModel] = useState(savedSettings.model || '');
-
-
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('vibe-sdf-settings', JSON.stringify({ apiKey, baseUrl, model }));
+      localStorage.setItem('vibe-sdf-settings', JSON.stringify({ provider, apiKey, baseUrl, model }));
     } catch { /* ignore */ }
-  }, [apiKey, baseUrl, model]);
+  }, [provider, apiKey, baseUrl, model]);
 
   const handleGenerate = useCallback(async () => {
     if (!apiKey.trim() || !prompt.trim()) return;
@@ -58,6 +58,7 @@ export default function Home() {
           prompt: prompt.trim(),
           apiKey: apiKey.trim(),
           baseUrl: baseUrl.trim() || undefined,
+          provider,
           model: model.trim() || undefined,
         }),
         signal: controller.signal,
@@ -85,7 +86,7 @@ export default function Home() {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [apiKey, baseUrl, prompt, model]);
+  }, [apiKey, baseUrl, prompt, provider, model]);
 
   const handleCodeChange = useCallback((value: string) => {
     setCode(value);
@@ -103,15 +104,25 @@ export default function Home() {
           <p className="text-[11px] text-[#5a5a7a] mt-0.5">Describe it, see it in 3D</p>
         </div>
 
-        {/* API key + model + base URL */}
+        {/* Provider + API key */}
         <div className="px-4 py-3 space-y-2 border-b border-[#1a1a2a]">
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="API Key"
-            className="w-full bg-[#14141e] border border-[#2a2a3a] rounded-md px-2.5 py-1.5 text-sm text-[#c8c8e0] placeholder:text-[#3a3a5a] outline-none focus:border-[#5a5aff]"
-          />
+          <div className="flex gap-2">
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as Provider)}
+              className="bg-[#14141e] border border-[#2a2a3a] rounded-md px-2 py-1.5 text-sm text-[#c8c8e0] outline-none focus:border-[#5a5aff]"
+            >
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+            </select>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="API Key"
+              className="flex-1 min-w-0 bg-[#14141e] border border-[#2a2a3a] rounded-md px-2.5 py-1.5 text-sm text-[#c8c8e0] placeholder:text-[#3a3a5a] outline-none focus:border-[#5a5aff]"
+            />
+          </div>
           <input
             value={model}
             onChange={(e) => setModel(e.target.value)}

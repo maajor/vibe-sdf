@@ -10,6 +10,9 @@
     "test": "jest"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/openai": "^3.0.53",
+    "@ai-sdk/openai-compatible": "^2.0.41",
     "@babel/parser": "^7.29.2",
     "@babel/traverse": "^7.29.0",
     "@types/babel__traverse": "^7.28.0",
