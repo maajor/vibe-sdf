@@ -460,6 +460,9 @@ function validateFromAst(ast: File, source: string): ValidationResult {
 let materialCounter = 0;
 let materialColors: Map<number, [number, number, number]>;
 
+// Const array value tracking (for resolving variable refs in opts like { color: stone })
+let constArrays: Map<string, number[]>;
+
 interface TranspileResult {
   glslMapFunction: string;
   materialColorTable: string;
@@ -693,6 +696,16 @@ function transpileExpression(node: Node, scopeVars: Map<string, string>): string
   }
 }
 
+function tryExtractNumericArray(node: Node): number[] | null {
+  if (node.type !== 'ArrayExpression') return null;
+  const vals: number[] = [];
+  for (const el of (node as { elements: (Node | null)[] }).elements) {
+    if (!el || el.type !== 'NumericLiteral') return null;
+    vals.push((el as { type: 'NumericLiteral'; value: number }).value);
+  }
+  return vals.length > 0 ? vals : null;
+}
+
 function extractOpts(args: Node[], requiredCount: number, scopeVars: Map<string, string>): {
   color: [number, number, number] | null;
   rotation: [number, number, number] | null;
@@ -707,21 +720,17 @@ function extractOpts(args: Node[], requiredCount: number, scopeVars: Map<string,
     if (optsArg && optsArg.type === 'ObjectExpression') {
       for (const prop of optsArg.properties) {
         if (prop.type === 'ObjectProperty' && prop.key.type === 'Identifier') {
-          if (prop.key.name === 'color' && prop.value.type === 'ArrayExpression') {
-            const vals = (prop.value.elements as Node[]).filter((e) => e !== null).map((e) => {
-              if (e.type === 'NumericLiteral') return (e as {type: 'NumericLiteral'; value: number}).value;
-              return parseFloat(transpileExpression(e, scopeVars));
-            });
-            if (vals.length === 3) {
+          // Resolve color: inline array or variable reference
+          if (prop.key.name === 'color') {
+            const vals = resolveNumericArray(prop.value);
+            if (vals && vals.length === 3) {
               result.color = vals as [number, number, number];
             }
           }
-          if (prop.key.name === 'rotation' && prop.value.type === 'ArrayExpression') {
-            const vals = (prop.value.elements as Node[]).filter((e) => e !== null).map((e) => {
-              if (e.type === 'NumericLiteral') return (e as {type: 'NumericLiteral'; value: number}).value;
-              return parseFloat(transpileExpression(e, scopeVars));
-            });
-            if (vals.length === 3) {
+          // Resolve rotation: inline array or variable reference
+          if (prop.key.name === 'rotation') {
+            const vals = resolveNumericArray(prop.value);
+            if (vals && vals.length === 3) {
               result.rotation = vals as [number, number, number];
             }
           }
@@ -733,6 +742,20 @@ function extractOpts(args: Node[], requiredCount: number, scopeVars: Map<string,
   return result;
 }
 
+function resolveNumericArray(node: Node): number[] | null {
+  // Direct array literal
+  if (node.type === 'ArrayExpression') {
+    return tryExtractNumericArray(node);
+  }
+  // Variable reference — look up tracked const arrays
+  if (node.type === 'Identifier') {
+    const name = sanitizeName(node.name);
+    const vals = constArrays.get(name);
+    if (vals) return vals;
+  }
+  return null;
+}
+
 function applyRotation(pExpr: string, rotation: [number, number, number]): string {
   let p = pExpr;
   if (rotation[0] !== 0) p = `opRotateX(${p}, ${radians(rotation[0])})`;
@@ -742,7 +765,8 @@ function applyRotation(pExpr: string, rotation: [number, number, number]): strin
 }
 
 function radians(deg: number): string {
-  return `(${deg} * 3.14159265359 / 180.0)`;
+  const d = Number.isInteger(deg) ? `${deg}.0` : `${deg}`;
+  return `(${d} * 3.14159265359 / 180.0)`;
 }
 
 function transpileStatement(node: Node, scopeVars: Map<string, string>, indent: string): string {
@@ -753,6 +777,11 @@ function transpileStatement(node: Node, scopeVars: Map<string, string>, indent: 
         if (decl.id.type === 'Identifier') {
           const name = sanitizeName(decl.id.name);
           if (decl.init) {
+            // Track const array literal values for opts variable resolution
+            if (decl.init.type === 'ArrayExpression') {
+              const vals = tryExtractNumericArray(decl.init);
+              if (vals) constArrays.set(name, vals);
+            }
             const expr = transpileExpression(decl.init, scopeVars);
             // Detect type from the expression
             const glslType = inferType(decl.init, scopeVars);
@@ -914,10 +943,14 @@ function transpileFunction(node: FunctionDeclaration): string {
   return glsl;
 }
 
+function emitFloat(n: number): string {
+  return Number.isInteger(n) ? `${n}.0` : `${n}`;
+}
+
 function buildMaterialColorTable(): string {
   let table = '';
   for (const [id, color] of materialColors) {
-    table += `  if (matId < ${id + 1}.0) return vec3(${color[0]}, ${color[1]}, ${color[2]});\n`;
+    table += `  if (matId < ${id + 1}.0) return vec3(${emitFloat(color[0])}, ${emitFloat(color[1])}, ${emitFloat(color[2])});\n`;
   }
   if (materialColors.size === 0) {
     table += '  return vec3(1.0);\n';
@@ -961,6 +994,7 @@ function checkSyntax(source: string): string | null {
 export function transpile(jsCode: string): TranspileResult {
   materialCounter = 0;
   materialColors = new Map();
+  constArrays = new Map();
 
   // Pre-parse syntax check — catch unbalanced parens etc. before Babel
   const syntaxError = checkSyntax(jsCode);
@@ -1021,8 +1055,8 @@ export function transpile(jsCode: string): TranspileResult {
 
     const materialColorTable = buildMaterialColorTable();
 
-    console.log('[transpiler] Generated GLSL map function:\n' + glslOutput);
-    console.log('[transpiler] Material color table:\n' + materialColorTable);
+    // console.log('[transpiler] Generated GLSL map function:\n' + glslOutput);
+    // console.log('[transpiler] Material color table:\n' + materialColorTable);
 
     return {
       glslMapFunction: glslOutput,

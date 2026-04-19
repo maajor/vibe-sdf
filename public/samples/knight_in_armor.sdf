@@ -1,0 +1,62 @@
+function map(p) {
+  const torso = roundedBox(p - vec3(0, -0.2, 0), vec3(0.6, 0.9, 0.35), 0.12, { color: [0.75, 0.77, 0.78] });
+  const chestEmblem = sphere(p - vec3(0, 0.3, 0.36), 0.22, { color: [0.92, 0.78, 0.18] });
+  const torsoMain = union(torso, chestEmblem, 0.25);
+
+  const pauldronL = roundedBox(p - vec3(-0.95, 0.55, 0.05), vec3(0.36, 0.20, 0.46), 0.12, { color: [0.66, 0.68, 0.7] });
+  const pauldronR = roundedBox(p - vec3(0.95, 0.55, 0.05), vec3(0.36, 0.20, 0.46), 0.12, { color: [0.66, 0.68, 0.7] });
+  const pauldrons = union(pauldronL, pauldronR, 0.22);
+  const upperBody = union(torsoMain, pauldrons, 0.18);
+
+  const neckChain = torus(rotateX(p - vec3(0, 0.9, 0), PI / 2), vec2(0.28, 0.08), { color: [0.22, 0.24, 0.26] });
+
+  const helmetCap = sphere(p - vec3(0, 1.25, 0), 0.48, { color: [0.59, 0.61, 0.63] });
+  const helmetVisorShell = roundedBox(p - vec3(0, 1.15, 0.22), vec3(0.36, 0.18, 0.28), 0.06, { color: [0.62, 0.64, 0.66] });
+  const visorEyeCut = box(p - vec3(0, 1.14, 0.6), vec3(0.33, 0.045, 0.12));
+  const cheekCutL = box(rotateZ(p - vec3(-0.28, 1.12, 0.18), 0.28), vec3(0.06, 0.12, 0.14));
+  const cheekCutR = box(rotateZ(p - vec3(0.28, 1.12, 0.18), -0.28), vec3(0.06, 0.12, 0.14));
+  const visor = subtract(subtract(subtract(helmetVisorShell, visorEyeCut), cheekCutL), cheekCutR);
+  const helmet = union(helmetCap, visor, 0.18);
+
+  const crestStem = cone(rotateX(p - vec3(0, 1.55, -0.05), -0.5), 0.5, 0.16, { color: [0.58, 0.12, 0.12] });
+  const crestBulb = sphere(p - vec3(0, 1.52, -0.35), 0.12, { color: [0.6, 0.14, 0.14] });
+  const crest = union(crestStem, crestBulb, 0.12);
+
+  const leftUpperArm = capsule(p, vec3(-0.55, 0.45, 0), vec3(-0.95, 0.05, 0.08), 0.12, { color: [0.68, 0.7, 0.72] });
+  const leftLowerArm = capsule(p, vec3(-0.95, 0.05, 0.08), vec3(-1.05, -0.45, 0.12), 0.10, { color: [0.68, 0.7, 0.72] });
+  const leftGauntlet = roundedBox(p - vec3(-1.05, -0.6, 0.12), vec3(0.12, 0.08, 0.16), 0.04, { color: [0.62, 0.64, 0.66] });
+  const leftArm = union(union(leftUpperArm, leftLowerArm, 0.12), leftGauntlet, 0.08);
+
+  const rightUpperArm = capsule(p, vec3(0.55, 0.45, 0), vec3(0.95, 0.05, 0.08), 0.12, { color: [0.68, 0.7, 0.72] });
+  const rightLowerArm = capsule(p, vec3(0.95, 0.05, 0.08), vec3(1.05, -0.35, -0.12), 0.10, { color: [0.68, 0.7, 0.72] });
+  const rightGauntlet = roundedBox(p - vec3(1.05, -0.5, -0.12), vec3(0.12, 0.08, 0.16), 0.04, { color: [0.62, 0.64, 0.66] });
+  const rightArm = union(union(rightUpperArm, rightLowerArm, 0.12), rightGauntlet, 0.08);
+
+  const swordBlade = roundedBox(rotateZ(p - vec3(0.95, -0.05, -0.18), -0.5), vec3(0.05, 0.78, 0.03), 0.02, { color: [0.85, 0.86, 0.88] });
+  const swordGuard = box(rotateZ(p - vec3(0.95, 0.2, -0.18), -0.5), vec3(0.14, 0.03, 0.06), { color: [0.92, 0.8, 0.2] });
+  const swordPommel = sphere(rotateZ(p - vec3(0.95, 1.0, -0.18), -0.5), 0.045, { color: [0.92, 0.8, 0.2] });
+  const sword = union(union(swordBlade, swordGuard, 0.08), swordPommel, 0.06);
+
+  const shieldOuter = roundedBox(p - vec3(-1.25, -0.02, 0.25), vec3(0.28, 0.42, 0.06), 0.08, { color: [0.64, 0.66, 0.68] });
+  const shieldInnerCut = roundedBox(p - vec3(-1.12, -0.02, 0.225), vec3(0.22, 0.36, 0.04), 0.06, { color: [0.45, 0.32, 0.18] });
+  const shieldWood = roundedBox(p - vec3(-1.12, -0.02, 0.25), vec3(0.22, 0.36, 0.04), 0.05, { color: [0.45, 0.32, 0.18] });
+  const shieldRim = subtract(shieldOuter, shieldInnerCut);
+  const shield = union(shieldRim, shieldWood, 0.06);
+
+  const leftLegUpper = capsule(p, vec3(-0.28, -0.9, 0), vec3(-0.28, -0.2, 0), 0.14, { color: [0.7, 0.72, 0.73] });
+  const leftLegLower = capsule(p, vec3(-0.28, -1.5, 0), vec3(-0.28, -0.9, 0), 0.12, { color: [0.68, 0.7, 0.72] });
+  const rightLegUpper = capsule(p, vec3(0.28, -0.9, 0), vec3(0.28, -0.2, 0), 0.14, { color: [0.7, 0.72, 0.73] });
+  const rightLegLower = capsule(p, vec3(0.28, -1.5, 0), vec3(0.28, -0.9, 0), 0.12, { color: [0.68, 0.7, 0.72] });
+  const legs = union(union(leftLegUpper, leftLegLower, 0.12), union(rightLegUpper, rightLegLower, 0.12), 0.14);
+
+  const belt = roundedBox(p - vec3(0, -0.5, 0.0), vec3(0.62, 0.09, 0.36), 0.06, { color: [0.35, 0.22, 0.12] });
+
+  const tabard = subtract(roundedBox(p - vec3(0, -0.9, 0.05), vec3(0.28, 0.6, 0.12), 0.06, { color: [0.12, 0.2, 0.48] }), box(p - vec3(0, -0.3, 0.2), vec3(0.26, 0.32, 0.08)));
+
+  const armoredBody = union(union(upperBody, neckChain, 0.14), union(helmet, crest, 0.12), 0.15);
+  const arms = union(leftArm, union(rightArm, sword, 0.08), 0.14);
+  const lower = union(legs, union(belt, tabard, 0.08), 0.12);
+  const equipment = union(shield, sword, 0.08);
+
+  return union(union(armoredBody, union(arms, lower, 0.16), 0.18), union(shield, sword, 0.12), 0.12);
+}

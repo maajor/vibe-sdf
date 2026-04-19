@@ -543,6 +543,20 @@ describe('rotation transforms', () => {
     expect(result.error).toBeUndefined();
     expect(result.glslMapFunction).toContain('opRotateX');
   });
+
+  test('rotation with integer degrees emits float in GLSL', () => {
+    const code = `
+      function map(p) {
+        return box(p, vec3(1, 1, 1), { rotation: [0, 90, 0] });
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+    expect(result.glslMapFunction).toContain('opRotateY');
+    // Must emit 90.0, not bare 90 (GLSL rejects int * float)
+    expect(result.glslMapFunction).toContain('90.0');
+    expect(result.glslMapFunction).not.toMatch(/\b90\b(?!\.0)/);
+  });
 });
 
 // ========== Color / material ==========
@@ -558,6 +572,47 @@ describe('color and materials', () => {
     expect(result.error).toBeUndefined();
     expect(result.materialColorTable).toContain('vec3(1');
     expect(result.materialColorTable).toContain('0');
+  });
+
+  test('color with integer values emits floats in material table', () => {
+    const code = `
+      function map(p) {
+        return sphere(p, 1.0, { color: [1, 0, 0] });
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+    // Must emit 1.0, 0.0 — not bare 1, 0
+    expect(result.materialColorTable).toContain('1.0');
+    expect(result.materialColorTable).toContain('0.0');
+    expect(result.materialColorTable).not.toMatch(/\bvec3\([0-9]+[^.]/);
+  });
+
+  test('color via variable reference resolves correctly', () => {
+    const code = `
+      function map(p) {
+        const stone = [0.75, 0.72, 0.68];
+        return sphere(p, 1.0, { color: stone });
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+    expect(result.materialColorTable).toContain('0.75');
+    expect(result.materialColorTable).toContain('0.72');
+    expect(result.materialColorTable).toContain('0.68');
+  });
+
+  test('rotation via variable reference resolves correctly', () => {
+    const code = `
+      function map(p) {
+        const rot = [0, 90, 0];
+        return box(p, vec3(1, 1, 1), { rotation: rot });
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+    expect(result.glslMapFunction).toContain('opRotateY');
+    expect(result.glslMapFunction).toContain('90.0');
   });
 });
 
@@ -883,5 +938,27 @@ describe('validation', () => {
     const result = transpile(code);
     expect(result.error).toBeDefined();
     expect(result.error).toContain('Syntax error');
+  });
+});
+
+// ========== Regression: error.md castle case ==========
+
+describe('regression: integer degrees and color variables', () => {
+  test('castle-like code with integer rotation degrees transpiles correctly', () => {
+    const code = `function map(p) {
+  const stone = [0.75, 0.72, 0.68];
+  const wallLeft = roundedBox(p - vec3(-1.25, 0, 0), vec3(1.25, 0.5, 0.12), 0.04, { rotation: [0, 90, 0], color: stone });
+  const wallRight = roundedBox(p - vec3(1.25, 0, 0), vec3(1.25, 0.5, 0.12), 0.04, { rotation: [0, 90, 0], color: stone });
+  return union(wallLeft, wallRight);
+}`;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+    // Rotation degrees must be floats
+    expect(result.glslMapFunction).toContain('90.0');
+    expect(result.glslMapFunction).not.toMatch(/opRotateY\([^,]+, \(90[^.]/);
+    // Color from variable must be resolved
+    expect(result.materialColorTable).toContain('0.75');
+    expect(result.materialColorTable).toContain('0.72');
+    expect(result.materialColorTable).toContain('0.68');
   });
 });

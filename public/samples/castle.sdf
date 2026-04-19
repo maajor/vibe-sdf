@@ -1,0 +1,141 @@
+function map(p) {
+  const stone = [0.75, 0.72, 0.68];
+  const darkStone = [0.5, 0.48, 0.45];
+  const wood = [0.42, 0.25, 0.12];
+  const metal = [0.12, 0.12, 0.14];
+  const waterCol = [0.07, 0.2, 0.5];
+
+  // Island / base platform
+  const island = roundedBox(p - vec3(0, -0.9, 0), vec3(1.6, 0.35, 1.6), 0.08, { color: [0.28, 0.22, 0.16] });
+
+  // Moat (as a solid torus used both to cut the island and to provide water)
+  const moatTorus = torus(p - vec3(0, -0.66, 0), vec2(1.45, 0.33));
+
+  // Island with moat carved out
+  const islandWithMoat = subtract(island, moatTorus);
+
+  // Walls (four curtain walls forming a square)
+  const wallY = -0.05; // center Y of walls
+  const wallHalfHeight = 0.5;
+  const wallThickness = 0.12;
+  const wallHalfLength = 1.25;
+  const wallFront = roundedBox(p - vec3(0, wallY, -1.25), vec3(wallHalfLength, wallHalfHeight, wallThickness), 0.04, { color: stone });
+  const wallBack = roundedBox(p - vec3(0, wallY, 1.25), vec3(wallHalfLength, wallHalfHeight, wallThickness), 0.04, { color: stone });
+  const wallLeft = roundedBox(p - vec3(-1.25, wallY, 0), vec3(wallHalfLength, wallHalfHeight, wallThickness), 0.04, { rotation: [0, 90, 0], color: stone });
+  const wallRight = roundedBox(p - vec3(1.25, wallY, 0), vec3(wallHalfLength, wallHalfHeight, wallThickness), 0.04, { rotation: [0, 90, 0], color: stone });
+
+  // Crenellations along front wall (repeat few blocks)
+  const crenY = wallY + wallHalfHeight + 0.08;
+  const crenW = 0.15;
+  const crenH = 0.12;
+  const crenD = 0.28;
+  const cren1 = box(p - vec3(-0.9, crenY, -1.25), vec3(0.1, crenH, crenD * 0.5), { color: stone });
+  const cren2 = box(p - vec3(-0.45, crenY, -1.25), vec3(0.1, crenH, crenD * 0.5), { color: stone });
+  const cren3 = box(p - vec3(0.0, crenY, -1.25), vec3(0.1, crenH, crenD * 0.5), { color: stone });
+  const cren4 = box(p - vec3(0.45, crenY, -1.25), vec3(0.1, crenH, crenD * 0.5), { color: stone });
+  const cren5 = box(p - vec3(0.9, crenY, -1.25), vec3(0.1, crenH, crenD * 0.5), { color: stone });
+
+  // Towers at four corners (cylindrical, taller than walls)
+  const towerHalfHeight = 0.9;
+  const towerRadius = 0.28;
+  const t1 = cylinder(p - vec3(-1.25, wallY, -1.25), towerHalfHeight, towerRadius, { color: darkStone });
+  const t2 = cylinder(p - vec3(1.25, wallY, -1.25), towerHalfHeight, towerRadius, { color: darkStone });
+  const t3 = cylinder(p - vec3(-1.25, wallY, 1.25), towerHalfHeight, towerRadius, { color: darkStone });
+  const t4 = cylinder(p - vec3(1.25, wallY, 1.25), towerHalfHeight, towerRadius, { color: darkStone });
+
+  // Tower battlements (four chunky blocks around each tower top)
+  const towerTopY = wallY + towerHalfHeight;
+  const bt = vec3(0.08, 0.12, 0.22);
+  const t1b1 = box(p - vec3(-1.25 + towerRadius, towerTopY + 0.02, -1.25), bt, { color: darkStone });
+  const t1b2 = box(p - vec3(-1.25 - towerRadius, towerTopY + 0.02, -1.25), bt, { color: darkStone });
+  const t1b3 = box(p - vec3(-1.25, towerTopY + 0.02, -1.25 + towerRadius), bt, { color: darkStone });
+  const t1b4 = box(p - vec3(-1.25, towerTopY + 0.02, -1.25 - towerRadius), bt, { color: darkStone });
+  const t2b1 = box(p - vec3(1.25 + towerRadius, towerTopY + 0.02, -1.25), bt, { color: darkStone });
+  const t2b2 = box(p - vec3(1.25 - towerRadius, towerTopY + 0.02, -1.25), bt, { color: darkStone });
+  const t2b3 = box(p - vec3(1.25, towerTopY + 0.02, -1.25 + towerRadius), bt, { color: darkStone });
+  const t2b4 = box(p - vec3(1.25, towerTopY + 0.02, -1.25 - towerRadius), bt, { color: darkStone });
+  const t3b1 = box(p - vec3(-1.25 + towerRadius, towerTopY + 0.02, 1.25), bt, { color: darkStone });
+  const t3b2 = box(p - vec3(-1.25 - towerRadius, towerTopY + 0.02, 1.25), bt, { color: darkStone });
+  const t3b3 = box(p - vec3(-1.25, towerTopY + 0.02, 1.25 + towerRadius), bt, { color: darkStone });
+  const t3b4 = box(p - vec3(-1.25, towerTopY + 0.02, 1.25 - towerRadius), bt, { color: darkStone });
+  const t4b1 = box(p - vec3(1.25 + towerRadius, towerTopY + 0.02, 1.25), bt, { color: darkStone });
+  const t4b2 = box(p - vec3(1.25 - towerRadius, towerTopY + 0.02, 1.25), bt, { color: darkStone });
+  const t4b3 = box(p - vec3(1.25, towerTopY + 0.02, 1.25 + towerRadius), bt, { color: darkStone });
+  const t4b4 = box(p - vec3(1.25, towerTopY + 0.02, 1.25 - towerRadius), bt, { color: darkStone });
+
+  // Central keep: large cylindrical keep with cone roof
+  const keepHalfHeight = 1.0;
+  const keepRadius = 0.45;
+  const keep = cylinder(p - vec3(0, wallY, 0), keepHalfHeight, keepRadius, { color: darkStone });
+  const roof = cone(p - vec3(0, wallY + keepHalfHeight + 0.4, 0), 0.4, 0.6, { color: [0.45, 0.12, 0.07] });
+
+  // Keep crenellations along rim (4 larger blocks)
+  const kr = vec3(0.12, 0.14, 0.28);
+  const kb1 = box(p - vec3(keepRadius, wallY + keepHalfHeight + 0.02, 0), kr, { color: darkStone });
+  const kb2 = box(p - vec3(-keepRadius, wallY + keepHalfHeight + 0.02, 0), kr, { color: darkStone });
+  const kb3 = box(p - vec3(0, wallY + keepHalfHeight + 0.02, keepRadius), kr, { color: darkStone });
+  const kb4 = box(p - vec3(0, wallY + keepHalfHeight + 0.02, -keepRadius), kr, { color: darkStone });
+
+  // Arrow slits/windows carved into walls and towers
+  const slit = box(p - vec3(0, 0.15, -1.25 - 0.05), vec3(0.02, 0.18, 0.05));
+  const slit2 = box(p - vec3(-1.25 - 0.05, 0.05, 0), vec3(0.05, 0.16, 0.02), { rotation: [0, 90, 0] });
+  const slit3 = box(p - vec3(1.25 + 0.05, 0.05, 0), vec3(0.05, 0.16, 0.02), { rotation: [0, 90, 0] });
+
+  // Gatehouse arch: subtractive shape (sphere for arch top + box for lower doorway)
+  const archTop = sphere(p - vec3(0, 0.25, -1.25), 0.35);
+  const archBottom = box(p - vec3(0, -0.25, -1.25), vec3(0.35, 0.35, 0.2));
+  const archHole = union(archTop, archBottom, 0.1);
+
+  // Portcullis (metal bars filling the arch)
+  const barHalfW = 0.02;
+  const portY = -0.05; // center Y for bars
+  const pb1 = box(p - vec3(-0.28, -0.05, -1.18), vec3(barHalfW, 0.45, 0.04), { color: metal });
+  const pb2 = box(p - vec3(-0.14, -0.05, -1.18), vec3(barHalfW, 0.45, 0.04), { color: metal });
+  const pb3 = box(p - vec3(0.0, -0.05, -1.18), vec3(barHalfW, 0.45, 0.04), { color: metal });
+  const pb4 = box(p - vec3(0.14, -0.05, -1.18), vec3(barHalfW, 0.45, 0.04), { color: metal });
+  const pb5 = box(p - vec3(0.28, -0.05, -1.18), vec3(barHalfW, 0.45, 0.04), { color: metal });
+  const portcullis = union(pb1, union(pb2, union(pb3, union(pb4, pb5))));
+
+  // Drawbridge: wooden plank lowered across moat (rotated)
+  const drawbridge = roundedBox(rotateX(p - vec3(0, -0.6, -1.5), 25 * PI / 180), vec3(0.5, 0.03, 0.9), 0.02, { color: wood });
+
+  // Hinge supports
+  const hingeL = box(p - vec3(-0.6, -0.2, -1.1), vec3(0.03, 0.06, 0.1), { color: darkStone });
+  const hingeR = box(p - vec3(0.6, -0.2, -1.1), vec3(0.03, 0.06, 0.1), { color: darkStone });
+
+  // Water surface (thin slice intersected with moat torus)
+  const waterSlice = box(p - vec3(0, -0.62, 0), vec3(2.0, 0.03, 2.0));
+  const water = intersect(moatTorus, waterSlice, { color: waterCol });
+
+  // Compose castle: start with walls and towers smoothly blended
+  const walls = union(wallFront, union(wallBack, union(wallLeft, wallRight, 0.35), 0.35), 0.35);
+  const crenellations = union(cren1, union(cren2, union(cren3, union(cren4, cren5))));
+  const towers = union(t1, union(t2, union(t3, t4)), 0.3);
+  const towerBattlements = union(
+    union(union(union(t1b1, t1b2), union(t1b3, t1b4)), union(union(t2b1, t2b2), union(t2b3, t2b4))),
+    union(union(union(t3b1, t3b2), union(t3b3, t3b4)), union(union(t4b1, t4b2), union(t4b3, t4b4)))
+  );
+
+  // keep details union
+  const keepBattles = union(union(kb1, kb2), union(kb3, kb4));
+  const keepAndRoof = union(keep, union(roof, keepBattles, 0.2), 0.3);
+
+  // aggregate castle body (stone)
+  const castleBody = union(walls, union(towers, union(towerBattlements, union(crenellations, keepAndRoof, 0.3), 0.3), 0.3), 0.3);
+
+  // Carve the arch from the castle body
+  const castleWithArch = subtract(castleBody, archHole);
+
+  // Carve arrow slits/windows into walls and towers for realism
+  const castleWithSlits = subtract(subtract(subtract(castleWithArch, slit), slit2), slit3);
+
+  // Add portcullis bars (solid metal) into arch, then add drawbridge and hinges
+  const castleWithGate = union(castleWithSlits, portcullis, 0.05);
+  const castleWithBridge = union(castleWithGate, union(drawbridge, union(hingeL, hingeR)), 0.02);
+
+  // Combine island + castle and then add water
+  const fortress = union(islandWithMoat, castleWithBridge, 0.3);
+  const scene = union(fortress, water);
+
+  return scene;
+}

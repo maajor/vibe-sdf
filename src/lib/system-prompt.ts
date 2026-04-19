@@ -87,6 +87,10 @@ plane(p, n, opts?)            // n: vec3 normal
 - \`color: [r, g, b]\` (0–1 range), default white
 - \`rotation: [x, y, z]\` Euler angles in degrees
 
+### Coordinate System
+- **Y-up**: positive Y is up, X is right, Z is toward the viewer
+- Camera looks at the origin from a Y-up perspective
+
 ### CSG Operations
 \`\`\`js
 union(a, b, k?)          // Hard union, or smooth blend if k provided

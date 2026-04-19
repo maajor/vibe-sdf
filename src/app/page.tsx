@@ -17,6 +17,13 @@ function cleanLLMOutput(text: string): string {
   return cleaned.trim();
 }
 
+const SAMPLES = [
+  { file: 'house.sdf', label: 'House', prompt: 'A cozy cottage' },
+  { file: 'castle.sdf', label: 'Castle', prompt: 'A medieval stone castle with curtain walls forming a square, four tall corner towers with battlements, a central keep, a gatehouse with an archway and portcullis, and a surrounding moat with a small drawbridge.' },
+  { file: 'knight_in_armor.sdf', label: 'Knight', prompt: 'A knight in armor' },
+  { file: 'aircraft_carrier.sdf', label: 'Aircraft Carrier', prompt: 'A flying aircraft carrier with a flat deck on top, control tower, planes parked on deck, massive jet engines underneath keeping it aloft, and radar dishes' },
+];
+
 export default function Home() {
   // Restore saved settings from localStorage
   const savedSettings = typeof window !== 'undefined'
@@ -32,6 +39,7 @@ export default function Home() {
   const [renderCode, setRenderCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [editorMaximized, setEditorMaximized] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   // Persist settings
@@ -163,6 +171,33 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Samples */}
+        <div className="px-4 py-2 border-b border-[#1a1a2a]">
+          <span className="text-[11px] text-[#5a5a7a] font-medium uppercase tracking-wider">Samples</span>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            {SAMPLES.map((s) => (
+              <button
+                key={s.file}
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/samples/${s.file}`);
+                    const text = await res.text();
+                    setCode(text);
+                    setRenderCode(text);
+                    setPrompt(s.prompt);
+                    setError(null);
+                  } catch {
+                    setError('Failed to load sample');
+                  }
+                }}
+                className="px-2 py-1 text-[11px] rounded bg-[#14141e] border border-[#2a2a3a] text-[#8888aa] hover:text-[#c8c8e0] hover:border-[#5a5aff] transition-colors"
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Code editor */}
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="px-4 py-1.5 border-b border-[#1a1a2a] flex items-center justify-between shrink-0">
@@ -170,7 +205,7 @@ export default function Home() {
             {isLoading && <span className="text-[11px] text-[#5a5aff] animate-pulse">streaming...</span>}
           </div>
           <div className="flex-1 min-h-0">
-            <CodeEditor value={code} onChange={handleCodeChange} />
+            <CodeEditor value={code} onChange={handleCodeChange} onToggleMaximize={() => setEditorMaximized(true)} />
           </div>
         </div>
 
@@ -186,6 +221,24 @@ export default function Home() {
       <div className="flex-1 relative">
         <Viewport code={renderCode} onError={setError} />
       </div>
+
+      {/* Fullscreen code editor overlay */}
+      {editorMaximized && (
+        <div className="fixed inset-0 z-50 bg-[#0d0d14] flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[#1a1a2a]">
+            <span className="text-[11px] text-[#5a5a7a] font-medium uppercase tracking-wider">Code Editor</span>
+            <button
+              onClick={() => setEditorMaximized(false)}
+              className="px-3 py-1 text-xs rounded bg-[#14141e] border border-[#2a2a3a] text-[#8888aa] hover:text-white hover:border-[#5a5aff] transition-colors"
+            >
+              Esc to close
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <CodeEditor value={code} onChange={handleCodeChange} maximized onToggleMaximize={() => setEditorMaximized(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,72 @@
+function map(p) {
+  const hull = roundedBox(p - vec3(0, -0.15, 0), vec3(1.6, 0.45, 0.6), 0.12, { color: [0.18, 0.2, 0.22] });
+  const deck = roundedBox(p - vec3(0, 0.62, 0), vec3(1.45, 0.06, 0.52), 0.02, { color: [0.06, 0.06, 0.06] });
+  const stripeCenter = roundedBox(p - vec3(0, 0.655, 0), vec3(0.95, 0.01, 0.05), 0.01, { color: [0.95, 0.95, 0.95] });
+  const stripeShort = roundedBox(p - vec3(0.45, 0.655, 0), vec3(0.18, 0.01, 0.03), 0.01, { color: [0.95, 0.95, 0.95] });
+  const deckDetails = union(stripeCenter, stripeShort, 0.08);
+  const deckUnion = union(deck, deckDetails, 0.12);
+
+  const islandBase = roundedBox(p - vec3(0.62, 0.95, 0.25), vec3(0.28, 0.18, 0.14), 0.04, { color: [0.72, 0.72, 0.74] });
+  const islandMid = roundedBox(p - vec3(0.64, 1.12, 0.25), vec3(0.19, 0.12, 0.11), 0.03, { color: [0.76, 0.76, 0.78] });
+  const islandTop = roundedBox(p - vec3(0.64, 1.28, 0.27), vec3(0.14, 0.08, 0.1), 0.02, { color: [0.8, 0.8, 0.82] });
+  const islandSolid = union(islandBase, union(islandMid, islandTop, 0.15), 0.18);
+  const islandWindowCut = box(p - vec3(0.5, 1.05, 0.47), vec3(0.20, 0.06, 0.03));
+  const islandGlass = box(p - vec3(0.5, 1.05, 0.48), vec3(0.18, 0.05, 0.005), { color: [0.18, 0.45, 0.7] });
+  const island = union(subtract(islandSolid, islandWindowCut), islandGlass, 0.08);
+
+  const radarMast1 = cylinder(p - vec3(0.35, 1.45, -0.15), 0.18, 0.02, { color: [0.2, 0.2, 0.22] });
+  const radarDish1 = subtract(sphere(p - vec3(0.35, 1.58, -0.15), 0.12), sphere(p - vec3(0.35, 1.55, -0.15), 0.055));
+  const radar1 = union(radarMast1, radarDish1, 0.06);
+
+  const radarMast2 = cylinder(p - vec3(0.78, 1.34, 0.02), 0.14, 0.02, { color: [0.2, 0.2, 0.22] });
+  const radarDish2 = subtract(roundedBox(p - vec3(0.78, 1.45, 0.02), vec3(0.09, 0.06, 0.02), 0.02), sphere(p - vec3(0.78, 1.44, 0.02), 0.05));
+  const radar2 = union(radarMast2, radarDish2, 0.06);
+
+  const plane1Body = roundedBox(p - vec3(-0.5, 0.68, -0.18), vec3(0.18, 0.04, 0.04), 0.02, { color: [0.92, 0.92, 0.95], rotation: [0, 8, 0] });
+  const plane1Wing = roundedBox(p - vec3(-0.5, 0.66, -0.55), vec3(0.12, 0.01, 0.36), 0.01, { color: [0.78, 0.78, 0.82], rotation: [0, 8, 0] });
+  const plane1Tail = roundedBox(p - vec3(-0.28, 0.72, -0.07), vec3(0.06, 0.02, 0.02), 0.01, { color: [0.92, 0.92, 0.95], rotation: [0, 18, 0] });
+  const plane1 = union(plane1Body, union(plane1Wing, plane1Tail, 0.06), 0.08);
+
+  const plane2Body = roundedBox(p - vec3(0.1, 0.68, 0.0), vec3(0.16, 0.035, 0.035), 0.02, { color: [0.88, 0.88, 0.9], rotation: [0, -6, 0] });
+  const plane2Wing = roundedBox(p - vec3(0.1, 0.66, 0.35), vec3(0.10, 0.01, 0.30), 0.01, { color: [0.78, 0.78, 0.82], rotation: [0, -6, 0] });
+  const plane2Tail = roundedBox(p - vec3(0.27, 0.72, 0.02), vec3(0.05, 0.02, 0.02), 0.01, { color: [0.88, 0.88, 0.9], rotation: [0, -12, 0] });
+  const plane2 = union(plane2Body, union(plane2Wing, plane2Tail, 0.06), 0.08);
+
+  const plane3Body = roundedBox(p - vec3(0.8, 0.68, -0.12), vec3(0.15, 0.035, 0.035), 0.02, { color: [0.87, 0.87, 0.9], rotation: [0, 15, 0] });
+  const plane3Wing = roundedBox(p - vec3(0.8, 0.66, -0.46), vec3(0.10, 0.01, 0.28), 0.01, { color: [0.78, 0.78, 0.82], rotation: [0, 15, 0] });
+  const plane3Tail = roundedBox(p - vec3(0.95, 0.72, -0.06), vec3(0.05, 0.02, 0.02), 0.01, { color: [0.87, 0.87, 0.9], rotation: [0, 20, 0] });
+  const plane3 = union(plane3Body, union(plane3Wing, plane3Tail, 0.06), 0.08);
+
+  const engineCore1 = cylinder(p - vec3(-0.65, -0.9, 0), 0.6, 0.28, { color: [0.23, 0.24, 0.26] });
+  const engineIntake1 = subtract(engineCore1, sphere(p - vec3(-0.65, -0.55, 0), 0.2));
+  const engineRing1 = torus(rotateX(p - vec3(-0.65, -0.55, 0), PI / 2), vec2(0.18, 0.04), { color: [0.14, 0.14, 0.16] });
+  const engineNozzle1 = cone(p - vec3(-0.65, -1.45, 0), 0.35, 0.22, { color: [0.2, 0.2, 0.22] });
+  const engine1 = union(engineIntake1, union(engineRing1, engineNozzle1, 0.12), 0.18);
+
+  const engineCore2 = cylinder(p - vec3(0.0, -0.95, 0), 0.7, 0.32, { color: [0.23, 0.24, 0.26] });
+  const engineIntake2 = subtract(engineCore2, sphere(p - vec3(0.0, -0.6, 0), 0.22));
+  const engineRing2 = torus(rotateX(p - vec3(0.0, -0.6, 0), PI / 2), vec2(0.2, 0.045), { color: [0.14, 0.14, 0.16] });
+  const engineNozzle2 = cone(p - vec3(0.0, -1.55, 0), 0.4, 0.25, { color: [0.2, 0.2, 0.22] });
+  const engine2 = union(engineIntake2, union(engineRing2, engineNozzle2, 0.12), 0.18);
+
+  const engineCore3 = cylinder(p - vec3(0.65, -0.9, 0), 0.6, 0.28, { color: [0.23, 0.24, 0.26] });
+  const engineIntake3 = subtract(engineCore3, sphere(p - vec3(0.65, -0.55, 0), 0.2));
+  const engineRing3 = torus(rotateX(p - vec3(0.65, -0.55, 0), PI / 2), vec2(0.18, 0.04), { color: [0.14, 0.14, 0.16] });
+  const engineNozzle3 = cone(p - vec3(0.65, -1.45, 0), 0.35, 0.22, { color: [0.2, 0.2, 0.22] });
+  const engine3 = union(engineIntake3, union(engineRing3, engineNozzle3, 0.12), 0.18);
+
+  const hangarCut = box(p - vec3(-1.05, -0.05, 0.62), vec3(0.45, 0.28, 0.06));
+  const deckGarageCut = box(p - vec3(0.0, 0.45, -0.52), vec3(0.9, 0.02, 0.06));
+
+  const hullWithDeck = union(hull, deckUnion, 0.25);
+  const hullWithIsland = union(hullWithDeck, island, 0.22);
+  const hullWithRadars = union(hullWithIsland, union(radar1, radar2, 0.06), 0.12);
+
+  const hullWithEngines = union(hullWithRadars, union(engine1, union(engine2, engine3, 0.3), 0.3), 0.28);
+  const hullWithPlanes = union(hullWithEngines, union(plane1, union(plane2, plane3, 0.08), 0.08), 0.14);
+
+  const withDeckCuts = subtract(hullWithPlanes, deckGarageCut);
+  const withHangar = subtract(withDeckCuts, hangarCut);
+
+  return withHangar;
+}
