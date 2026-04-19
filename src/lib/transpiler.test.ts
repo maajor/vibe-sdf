@@ -579,7 +579,7 @@ describe('error handling', () => {
     const code = `function map(p) { return }}}}`;
     const result = transpile(code);
     expect(result.error).toBeDefined();
-    expect(result.error).toContain('Transpilation error');
+    expect(result.error).toContain('Syntax error');
   });
 
   test('empty input returns error', () => {
@@ -646,5 +646,242 @@ describe('expressions', () => {
     // === should become ==
     expect(result.glslMapFunction).toContain('==');
     expect(result.glslMapFunction).not.toContain('===');
+  });
+});
+
+// ========== Validation ==========
+
+describe('validation', () => {
+  test('capsule with 3 args produces clear error', () => {
+    const code = `
+      function map(p) {
+        return capsule(p - vec3(0.9, 0.2, 0.35), vec3(0.9, 1.25, 0.35), 0.03, { color: [1, 0, 0] });
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('capsule()');
+    expect(result.error).toContain('expects 4 positional arguments');
+    expect(result.error).toContain('got 3');
+    expect(result.error).toContain('Line');
+    expect(result.error).toContain('capsule(p - vec3');
+  });
+
+  test('capsule with correct args produces no error', () => {
+    const code = `
+      function map(p) {
+        return capsule(p, vec3(0, -1, 0), vec3(0, 1, 0), 0.5);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('sphere with wrong arg count produces error', () => {
+    const code = `
+      function map(p) {
+        return sphere(p);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('sphere()');
+    expect(result.error).toContain('expects 2');
+  });
+
+  test('union with 4 args produces error', () => {
+    const code = `
+      function map(p) {
+        return union(sphere(p, 1.0), box(p, vec3(1,1,1)), 0.3, 0.5);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('union()');
+    expect(result.error).toContain('expects 2 or 3');
+  });
+
+  test('union with float arg produces type mismatch error', () => {
+    const code = `
+      function map(p) {
+        return union(0.5, sphere(p, 1.0));
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('union()');
+    expect(result.error).toContain('argument 1');
+    expect(result.error).toContain('float');
+  });
+
+  test('union with two non-SDF args produces no-sdf-input error', () => {
+    const code = `
+      function map(p) {
+        return union(1.0, 2.0);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('no SDF shape inputs');
+  });
+
+  test('undeclared variable produces error', () => {
+    const code = `
+      function map(p) {
+        return sphere(p, radius);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain("'radius'");
+    expect(result.error).toContain('never declared');
+  });
+
+  test('declared variable produces no error', () => {
+    const code = `
+      function map(p) {
+        const radius = 1.0;
+        return sphere(p, radius);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('arrow function produces unsupported syntax error', () => {
+    const code = `
+      function map(p) {
+        const fn = (x) => x + 1;
+        return sphere(p, fn(1.0));
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('ArrowFunctionExpression');
+    expect(result.error).toContain('not supported');
+  });
+
+  test('unknown function call produces error', () => {
+    const code = `
+      function map(p) {
+        return smoothUnion(sphere(p, 1.0), box(p, vec3(1,1,1)), 0.3);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain("Unknown function 'smoothUnion()'");
+  });
+
+  test('user-defined function call produces no error', () => {
+    const code = `
+      function helper(p, r) {
+        return sphere(p, r);
+      }
+      function map(p) {
+        return helper(p, 1.0);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('multiple errors are all collected', () => {
+    const code = `function map(p) {
+  return union(
+    capsule(p, vec3(0,0,0), 0.5),
+    smoothUnion(sphere(p, 1.0), box(p, vec3(1,1,1)), 0.3)
+  );
+}`;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('capsule()');
+    expect(result.error).toContain('smoothUnion');
+  });
+
+  test('error includes source line context', () => {
+    const code = `function map(p) {\n  return sphere(p);\n}`;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('Line 2');
+    expect(result.error).toContain('return sphere(p)');
+  });
+
+  test('valid complex code produces no errors', () => {
+    const code = `
+      function map(p) {
+        const s = sphere(p - vec3(0, 1, 0), 0.5, { color: [1, 0, 0] });
+        const b = box(p, vec3(1, 0.5, 1), { color: [0, 1, 0] });
+        const c = capsule(p, vec3(0, -1, 0), vec3(0, 1, 0), 0.3);
+        return union(s, union(b, c, 0.1), 0.2);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('Math constants and builtins do not produce unknown function errors', () => {
+    const code = `
+      function map(p) {
+        const r = Math.sin(1.0) + Math.abs(p.x);
+        return sphere(p, r);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('subtract with wrong arg count produces error', () => {
+    const code = `
+      function map(p) {
+        return subtract(sphere(p, 1.0));
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('subtract()');
+    expect(result.error).toContain('expects 2 or 3');
+  });
+
+  test('template literal produces unsupported syntax error', () => {
+    const code = `
+      function map(p) {
+        const s = \`hello\`;
+        return sphere(p, 1.0);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('TemplateLiteral');
+  });
+
+  test('unbalanced parens produces clear error', () => {
+    const code = `function map(p) {
+  const rigging = union(union(a, union(b, union(c, union(d, union(e, f, 0.05), g, 0.05), 0.05), 0.05), 0.05);
+  return rigging;
+}`;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('Unbalanced parentheses');
+    expect(result.error).toContain("'(' without matching ')'");
+  });
+
+  test('balanced parens on multiline calls produces no syntax error', () => {
+    const code = `
+      function map(p) {
+        const a = sphere(p, 1.0);
+        const b = box(p, vec3(1, 1, 1));
+        return union(a, b);
+      }
+    `;
+    const result = transpile(code);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('babel parse error is formatted with source line', () => {
+    // Use a syntax error that has balanced parens but invalid JS
+    const code = `function map(p) {\n  return sphere(p, 1.0);\n}\nconst x = ;`;
+    const result = transpile(code);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('Syntax error');
   });
 });
