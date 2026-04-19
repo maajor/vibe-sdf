@@ -57,17 +57,15 @@ SdfResult sdCylinder(vec3 p, float h, float r, float matId) {
 }
 
 SdfResult sdCone(vec3 p, float h, float r, float matId) {
-  vec2 q = vec2(length(p.xz), p.y);
-  vec2 tip = vec2(0.0, h);
-  vec2 base = vec2(r, -h);
-  vec2 ab = base - tip;
-  vec2 ap = q - tip;
-  float t = clamp(dot(ap, ab) / dot(ab, ab), 0.0, 1.0);
-  float d = length(ap - ab * t);
-  // Simpler cone SDF
-  vec2 qq = vec2(length(p.xz), p.y);
-  float coneD = max(dot(vec2(r/h, -1.0), qq), -qq.y - h);
-  return makeSdf(coneD, matId);
+  // iq's sdCone, tip at origin, base at y=-h with radius r
+  vec2 q = h * vec2(r / h, -1.0);
+  vec2 w = vec2(length(p.xz), p.y);
+  vec2 a = w - q * clamp(dot(w, q) / dot(q, q), 0.0, 1.0);
+  vec2 b = w - q * vec2(clamp(w.x / q.x, 0.0, 1.0), 1.0);
+  float k = sign(q.y);
+  float d = min(dot(a, a), dot(b, b));
+  float s = max(k * (w.x * q.y - w.y * q.x), k * (w.y - q.y));
+  return makeSdf(sqrt(d) * sign(s), matId);
 }
 
 SdfResult sdPlane(vec3 p, vec3 n, float matId) {
@@ -245,10 +243,6 @@ void main() {
     col = matCol * (ambient + diff * sha * vec3(1.0, 0.95, 0.9) * 0.7
                   + diff2 * vec3(0.2, 0.25, 0.35) * 0.3)
         + spec * sha * vec3(0.4, 0.4, 0.35);
-
-    // Fog
-    float fog = exp(-0.015 * hit.x * hit.x);
-    col = mix(vec3(0.05, 0.05, 0.08), col, fog);
   }
 
   // Tone mapping

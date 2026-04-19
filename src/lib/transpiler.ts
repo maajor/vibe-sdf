@@ -34,6 +34,7 @@ interface TranspileResult {
 }
 
 function emitVec3(args: string[]): string {
+  while (args.length < 3) args.push('0.0');
   return `vec3(${args.join(', ')})`;
 }
 
