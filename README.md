@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# vibe-sdf
+
+Generate 3D SDF models from natural language using LLMs, rendered in real-time with WebGL ray marching.
+
+![vibe-sdf](imgs/vibesdf.jpg)
+
+## How It Works
+
+```
+Prompt → LLM (GPT-4 / Claude) → JS SDF DSL → GLSL Transpiler → Ray Marching Shader → WebGL
+```
+
+Describe a 3D shape in plain English. The LLM generates SDF code in a JavaScript DSL, which is transpiled to GLSL and rendered instantly via ray marching.
+
+## Features
+
+- **LLM-powered 3D generation** — Supports OpenAI and Anthropic providers
+- **Custom SDF DSL** — Primitives (sphere, box, torus, capsule, cylinder, cone), CSG operations (union, subtract, intersect), smooth blending, spatial transforms
+- **Real-time WebGL rendering** — Ray marching with soft shadows, ambient occlusion, and multi-light setup
+- **Live code editor** — Syntax highlighting, line numbers, instant preview on edit
+- **Sample gallery** — Built-in examples: house, castle, knight, aircraft carrier
+- **Robust generation** — Agentic retry loop validates and re-prompts on transpilation errors
+
+## Sample Gallery
+
+![samples](imgs/samples.jpg)
+
+## Tech Stack
+
+- **Next.js** + **React** + **TypeScript**
+- **Three.js** / WebGL for rendering
+- **Vercel AI SDK** for LLM integration
+- **Babel parser** for AST-based JS → GLSL transpilation
+- **Tailwind CSS**
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), enter your API key (OpenAI or Anthropic), and describe a shape.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## License
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
